@@ -1,0 +1,48 @@
+#!/bin/bash
+
+echo "----脚本开始----"
+
+# specify GPU. If gpu<0, cpu is used.
+if [[ -z $1 ]]; then
+    gpu=0
+else
+    gpu=$1
+fi
+
+if [[ -z $2 ]]; then
+#    n=$(wc -l < seeds.txt)
+    n=1
+else
+    n=$2
+fi
+
+alpha=0.5 # mixup parameter
+
+model=GLAM # default
+# Albation study: ResMultiConv3, MAResMultiConv3, AAResMultiConv3
+# Comparison: MACNN, CNN_AttnPooling
+
+impro_or_script=impro # default
+# script, all
+
+dir=data/mfccS1.8O1.6a$alpha/$model
+
+echo "运行环境和变量设置完成，开始执行主程序"
+
+while read seed; do
+    seed=${seed//$'\r'/}
+    if ! grep -q $seed $dir/${model}_mfcc_impro.metric &>/dev/null; then
+        if [[ $n == 0 ]]; then
+            break
+        fi
+        if [[ ! -d $dir/$seed ]]; then
+            echo "读取seed并计算，即将开始调用Python"
+            echo "$dir/$seed"
+            python train.py --alpha $alpha --model $model --impro_or_script $impro_or_script --seed $seed -d $dir/$seed
+            echo "Python调用结束"
+            n=$[n-1]
+        fi
+    fi
+done < seeds.txt
+
+echo "----脚本结束----"
